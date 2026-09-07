@@ -1,10 +1,16 @@
 # Backend Developer Technical Assignment
 
+REST API dibangun menggunakan **Spring Boot 3**, **Spring Security (JWT)**, dan **PostgreSQL** untuk mendukung fitur autentikasi, pencarian lokasi toko, serta manajemen cabang.
+
+---
+
 ## 🛠️ Tech Stack
 
-- **Java 17** & **Spring Boot 3.x**
+- **Java 17**
+- **Spring Boot 3.x**
 - **Spring Security & JJWT**
-- **Spring Data JPA** & **PostgreSQL**
+- **Spring Data JPA**
+- **PostgreSQL**
 - **Maven**
 
 ---
@@ -13,33 +19,88 @@
 
 ### 1. Security & Authentication
 
-- Seluruh endpoint API terproteksi dan hanya bisa diakses setelah pengguna **login** menggunakan JWT Token (`Authorization: Bearer <token>`).
+Seluruh endpoint API terproteksi dan hanya dapat diakses setelah pengguna melakukan **login** menggunakan JWT Token.
 
-### 2. Global Soft-Delete & Active Filter
+Token dikirim melalui HTTP Header:
 
-- Semua response API secara otomatis hanya mengembalikan data yang **aktif (`is_active = true`)** dan **belum dihapus (`is_deleted = false`)**.
+```http
+Authorization: Bearer <JWT_TOKEN>
+```
+
+---
+
+### 2. Global Soft Delete & Active Filter
+
+Seluruh response API secara otomatis hanya mengembalikan data yang memenuhi kondisi:
+
+```text
+is_active = true
+is_deleted = false
+```
+
+Dengan demikian, data yang tidak aktif atau sudah dihapus tidak akan ditampilkan pada response API.
+
+---
 
 ### 3. Store Search & Whitelist Management
 
-- **Pencarian Toko:** Mencari daftar toko berdasarkan nama provinsi.
-- **Whitelist Toko:** Toko yang ditandai sebagai _whitelisted_ (`is_whitelisted = true`) akan **selalu ditampilkan di semua hasil pencarian provinsi**, terlepas dari lokasi provinsinya.
-- Pengguna dapat mengelola, memperbarui status, atau menghapus toko dari daftar whitelist kapan saja.
+#### 🔍 Pencarian Toko
 
-### 4. Management Branch
+Pengguna dapat mencari daftar toko berdasarkan **nama provinsi**.
 
-- Fitur untuk memperbarui (_update_) dan menghapus (_delete_) data cabang/branch.
+Contoh:
 
-## ⚙️ Cara Menjalankan Aplikasi
+```http
+GET /api/stores?provinceName=Jawa&page=0&size=10
+```
 
-### 1. Prasyarat
+#### ⭐ Whitelist Toko
 
-- Java 17 atau versi lebih baru
-- Maven
-- PostgreSQL
+Toko yang memiliki status:
 
-### 2. Konfigurasi Database
+```text
+is_whitelisted = true
+```
 
-Sesuaikan koneksi database PostgreSQL di file `src/main/resources/application.properties`:
+akan **selalu ditampilkan pada hasil pencarian**, terlepas dari lokasi provinsinya.
+
+Pengguna juga dapat:
+
+- Menambahkan toko ke whitelist.
+- Menghapus toko dari whitelist.
+
+---
+
+### 4. Branch Management
+
+API menyediakan fitur untuk melakukan:
+
+- **Update Branch**
+- **Delete Branch**
+
+Operasi delete menggunakan mekanisme **soft delete**, sehingga data tidak benar-benar dihapus dari database.
+
+# ⚙️ Cara Menjalankan Aplikasi
+
+## 1. Prasyarat
+
+Pastikan software berikut sudah ter-install:
+
+- **Java 17** atau versi lebih baru
+- **Maven**
+- **PostgreSQL**
+
+---
+
+## 2. Konfigurasi Database
+
+Sesuaikan konfigurasi koneksi PostgreSQL pada:
+
+```text
+src/main/resources/application.properties
+```
+
+Contoh konfigurasi:
 
 ```properties
 spring.datasource.url=jdbc:postgresql://localhost:5432/indomarco
@@ -49,58 +110,179 @@ spring.datasource.password=postgres_pass
 # Menjalankan data.sql secara otomatis saat startup
 spring.sql.init.mode=always
 spring.jpa.defer-datasource-initialization=true
-3. Build & Run
-Jalankan perintah berikut pada terminal di root folder proyek:
+```
 
-Bash
+Pastikan database `indomarco` sudah dibuat terlebih dahulu.
+
+---
+
+## 3. Build & Run
+
+Jalankan perintah berikut dari **root folder project**.
+
+### Build
+
+```bash
 mvn clean install
+```
+
+### Menjalankan aplikasi
+
+```bash
 mvn spring-boot:run
-Aplikasi akan berjalan di http://localhost:8080.
+```
 
-🧪 Cara Pengujian API (Via Postman)
-Seluruh endpoint API dapat ditest secara manual menggunakan Postman. File collection telah disediakan di dalam repositori:
+Setelah aplikasi berhasil dijalankan, API dapat diakses melalui:
 
-File Path: ./postman/Store_API_Collection.json
+```text
+http://localhost:8080
+```
 
-Langkah-Langkah Testing:
-Import Collection ke Postman:
+---
 
-Buka aplikasi Postman.
+# 🧪 Cara Pengujian API dengan Postman
 
-Klik tombol Import di kiri atas.
+Seluruh endpoint API dapat diuji secara manual menggunakan **Postman**.
 
-Pilih atau drag-and-drop file ./postman/Store_API_Collection.json.
+Postman collection telah disediakan di dalam repository:
 
-Langkah 1: Otentikasi (Login)
+```text
+./postman/Indomarco.postman_collection.json
+```
 
-Jalankan request POST /api/auth/login.
+---
 
-Body Request (JSON):
+## 1. Import Collection ke Postman
 
-JSON
+1. Buka aplikasi **Postman**.
+2. Klik **Import**.
+3. Pilih atau drag & drop file:
+
+```text
+./postman/Indomarco.postman_collection.json
+```
+
+---
+
+## 2. Authentication / Login
+
+Jalankan request:
+
+```http
+POST /api/auth/login
+```
+
+### Request Body
+
+Gunakan format JSON:
+
+```json
 {
   "username": "admin",
   "password": "password123"
 }
-Salin nilai JWT Token yang ada pada response.
+```
 
-Langkah 2: Mengakses Endpoint Terproteksi
+Setelah berhasil login, salin **JWT Token** yang terdapat pada response.
 
-Untuk setiap request selanjutnya (Search Store, Update/Delete Branch), tambahkan token ke dalam Header:
+---
 
-Key: Authorization
+## 3. Mengakses Endpoint Terproteksi
 
-Value: Bearer <TOKEN_JWT_KAMU>
+Untuk request berikutnya, tambahkan JWT Token pada HTTP Header:
 
-Skenario Testing yang Dapat Dicoba:
+| Key             | Value                |
+| --------------- | -------------------- |
+| `Authorization` | `Bearer <JWT_TOKEN>` |
 
-Search Store by Province: GET /api/stores?provinceName=Jawa&page=0&size=10
+Contoh:
 
-Pastikan toko di provinsi yang dicari dan toko bertipe whitelisted dari luar provinsi ikut muncul.
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+```
 
-Pastikan toko yang is_deleted = true atau is_active = false tidak muncul di response.
+---
 
-Update Branch: PUT /api/branches/{id}
+# 🧪 Skenario Testing
 
-Delete Branch: DELETE /api/branches/{id} (Soft delete).
+## 1. Search Store by Province
+
+Request:
+
+```http
+GET /api/stores?provinceName=Jawa&page=0&size=10
+```
+
+### Yang perlu diperiksa:
+
+- Store dari provinsi yang sesuai muncul pada response.
+- Store yang memiliki `is_whitelisted = true` dari provinsi lain tetap muncul.
+- Store dengan `is_deleted = true` tidak muncul.
+- Store dengan `is_active = false` tidak muncul.
+- Pagination berjalan sesuai parameter `page` dan `size`.
+
+---
+
+## 2. Update Branch
+
+Request:
+
+```http
+PUT /api/branches/{id}
+```
+
+Pastikan data branch berhasil diperbarui sesuai request.
+
+---
+
+## 3. Delete Branch
+
+Request:
+
+```http
+DELETE /api/branches/{id}
+```
+
+Delete menggunakan mekanisme **soft delete**.
+
+Setelah branch dihapus:
+
+```text
+is_deleted = true
+```
+
+Data tetap tersimpan di database tetapi tidak akan ditampilkan pada response API.
+
+---
+
+## 📌 API Endpoint Summary
+
+| Method   | Endpoint                                 | Description                         |
+| -------- | ---------------------------------------- | ----------------------------------- |
+| `POST`   | `/api/auth/login`                        | Login dan mendapatkan JWT Token     |
+| `POST`   | `/api/auth/register`                     | Registrasi user baru                |
+| `PUT`    | `/api/stores/whitelist/{id}`             | Mengubah status whitelist store     |
+| `GET`    | `/api/stores/search?province=Jawa Barat` | Mencari store berdasarkan provinsi  |
+| `GET`    | `/api/branches`                          | Mendapatkan daftar branch           |
+| `PUT`    | `/api/branches/{id}`                     | Memperbarui data branch             |
+| `DELETE` | `/api/branches/{id}`                     | Menghapus branch secara soft delete |
+
+---
+
+## 📁 Project Structure
+
+File Postman collection tersedia pada:
+
+```text
+postman/
+└── Store_API_Collection.json
+```
+
+Konfigurasi aplikasi tersedia pada:
+
+```text
+src/
+└── main/
+    └── resources/
+        └── application.properties
 ```
