@@ -164,12 +164,12 @@ Postman collection telah disediakan di dalam repository:
 
 ---
 
-## 2. Authentication / Login
+## 2. Register User
 
-Jalankan request:
+Sebelum melakukan login, buat akun terlebih dahulu menggunakan endpoint:
 
 ```http
-POST /api/auth/login
+POST /api/auth/register
 ```
 
 ### Request Body
@@ -179,17 +179,40 @@ Gunakan format JSON:
 ```json
 {
   "username": "admin",
-  "password": "password123"
+  "password": "admin123"
 }
 ```
 
-Setelah berhasil login, salin **JWT Token** yang terdapat pada response.
+Setelah registrasi berhasil, user dapat digunakan untuk proses login.
 
 ---
 
-## 3. Mengakses Endpoint Terproteksi
+## 3. Login
 
-Untuk request berikutnya, tambahkan JWT Token pada HTTP Header:
+Setelah berhasil melakukan registrasi, jalankan request:
+
+```http
+POST /api/auth/login
+```
+
+### Request Body
+
+```json
+{
+  "username": "admin",
+  "password": "admin123"
+}
+```
+
+Setelah login berhasil, salin **JWT Token** yang terdapat pada response.
+
+---
+
+## 4. Mengakses Endpoint Terproteksi
+
+Endpoint selain register dan login membutuhkan JWT Token.
+
+Tambahkan token pada HTTP Header:
 
 | Key             | Value                |
 | --------------- | -------------------- |
@@ -201,46 +224,101 @@ Contoh:
 Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
 ```
 
+Token tersebut digunakan untuk mengakses endpoint Store dan Branch.
+
 ---
 
 # 🧪 Skenario Testing
 
-## 1. Search Store by Province
-
-Request:
+## 1. Register User
 
 ```http
-GET /api/stores?provinceName=Jawa&page=0&size=10
+POST /api/auth/register
+```
+
+Pastikan user berhasil dibuat dan dapat digunakan untuk login.
+
+---
+
+## 2. Login
+
+```http
+POST /api/auth/login
+```
+
+Pastikan login berhasil dan JWT Token berhasil diperoleh.
+
+---
+
+## 3. Search Store by Province
+
+```http
+GET /api/stores/search?province=Jawa Barat
 ```
 
 ### Yang perlu diperiksa:
 
-- Store dari provinsi yang sesuai muncul pada response.
-- Store yang memiliki `is_whitelisted = true` dari provinsi lain tetap muncul.
+- Store dari provinsi yang dicari muncul pada response.
+- Store dengan `is_whitelisted = true` dari provinsi lain tetap muncul.
 - Store dengan `is_deleted = true` tidak muncul.
 - Store dengan `is_active = false` tidak muncul.
-- Pagination berjalan sesuai parameter `page` dan `size`.
 
 ---
 
-## 2. Update Branch
+## 4. Update Store Whitelist
 
-Request:
+```http
+PUT /api/stores/whitelist/{id}
+```
+
+Contoh:
+
+```http
+PUT /api/stores/whitelist/8
+```
+
+Digunakan untuk mengubah status whitelist pada store.
+
+Pastikan perubahan status whitelist berhasil dan memengaruhi hasil pencarian store.
+
+---
+
+## 5. Get Branches
+
+```http
+GET /api/branches
+```
+
+Digunakan untuk mendapatkan daftar branch yang masih aktif dan belum dihapus.
+
+---
+
+## 6. Update Branch
 
 ```http
 PUT /api/branches/{id}
+```
+
+Contoh:
+
+```http
+PUT /api/branches/1
 ```
 
 Pastikan data branch berhasil diperbarui sesuai request.
 
 ---
 
-## 3. Delete Branch
-
-Request:
+## 7. Delete Branch
 
 ```http
 DELETE /api/branches/{id}
+```
+
+Contoh:
+
+```http
+DELETE /api/branches/1
 ```
 
 Delete menggunakan mekanisme **soft delete**.
@@ -251,7 +329,7 @@ Setelah branch dihapus:
 is_deleted = true
 ```
 
-Data tetap tersimpan di database tetapi tidak akan ditampilkan pada response API.
+Data tetap tersimpan di database, tetapi tidak akan ditampilkan pada response API.
 
 ---
 
@@ -259,10 +337,10 @@ Data tetap tersimpan di database tetapi tidak akan ditampilkan pada response API
 
 | Method   | Endpoint                                 | Description                         |
 | -------- | ---------------------------------------- | ----------------------------------- |
-| `POST`   | `/api/auth/login`                        | Login dan mendapatkan JWT Token     |
 | `POST`   | `/api/auth/register`                     | Registrasi user baru                |
-| `PUT`    | `/api/stores/whitelist/{id}`             | Mengubah status whitelist store     |
+| `POST`   | `/api/auth/login`                        | Login dan mendapatkan JWT Token     |
 | `GET`    | `/api/stores/search?province=Jawa Barat` | Mencari store berdasarkan provinsi  |
+| `PUT`    | `/api/stores/whitelist/{id}`             | Mengubah status whitelist store     |
 | `GET`    | `/api/branches`                          | Mendapatkan daftar branch           |
 | `PUT`    | `/api/branches/{id}`                     | Memperbarui data branch             |
 | `DELETE` | `/api/branches/{id}`                     | Menghapus branch secara soft delete |
@@ -275,7 +353,7 @@ File Postman collection tersedia pada:
 
 ```text
 postman/
-└── Store_API_Collection.json
+└── Indomarco.postman_collection.json
 ```
 
 Konfigurasi aplikasi tersedia pada:
